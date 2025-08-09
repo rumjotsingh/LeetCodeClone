@@ -85,6 +85,7 @@ const contestSlice = createSlice({
       })
       .addCase(fetchContests.fulfilled, (state, action) => {
         state.loading = false;
+
         state.contests = action.payload;
       })
       .addCase(fetchContests.rejected, (state, action) => {

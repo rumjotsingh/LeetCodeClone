@@ -25,11 +25,18 @@ export const AuthProvider = ({ children }) => {
     const initAuth = async () => {
       if (!initialized) {
         setLoading(true);
-        try {
-          await dispatch(loadUserFromStorage()).unwrap();
-        } catch (error) {
-          console.error("Failed to load user:", error);
+
+        const hasUser = localStorage.getItem("user");
+        const hasToken = localStorage.getItem("token");
+
+        if (hasUser && hasToken) {
+          try {
+            await dispatch(loadUserFromStorage()).unwrap();
+          } catch (error) {
+            console.error("Failed to load user:", error);
+          }
         }
+
         setInitialized(true);
         setLoading(false);
       }

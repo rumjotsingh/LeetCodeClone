@@ -99,14 +99,14 @@ export const loadUserFromStorage = createAsyncThunk(
     try {
       const user = localStorage.getItem("user");
       const token = localStorage.getItem("token");
-      
+
       if (!user || !token) {
         return thunkAPI.rejectWithValue("No user data in storage");
       }
 
       return {
         user: JSON.parse(user),
-        token: token
+        token: token,
       };
     } catch (error) {
       return thunkAPI.rejectWithValue("Failed to load user data");

@@ -70,11 +70,7 @@ export default function CalendarHeatmap({ data = {} }) {
       {/* Heatmap Grid */}
       <div className="flex">
         {/* Weekday labels */}
-        <div className="flex flex-col justify-between mr-1 text-xs text-gray-500 h-[112px]">
-          <span>Mon</span>
-          <span>Wed</span>
-          <span>Fri</span>
-        </div>
+        
 
         {/* Week columns */}
         <div className="flex gap-[2px]">
@@ -116,7 +112,7 @@ export default function CalendarHeatmap({ data = {} }) {
                 </div>
 
                 {/* Spacer after month ends */}
-                {isMonthEnding && <div className="w-1" />}
+                {isMonthEnding && <div className="w-4" />}
               </div>
             );
           })}

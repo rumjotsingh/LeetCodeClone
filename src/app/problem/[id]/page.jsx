@@ -11,7 +11,7 @@ import {
   fetchAllSubmission,
 } from "../../../redux/slices/problemSlice";
 import { fetchComments } from "../../../redux/slices/commentsSlice";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   Tabs,
   TabsList,
@@ -30,6 +30,7 @@ import CodeEditor from "../../../Component/CodeEditer";
 import { Skeleton } from "@/components/ui/skeleton";
 import CommentSection from "../../../Component/Commnets";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useAuth } from '@/context/authContext';
 
 function markdownToHtml(md) {
   return md
@@ -94,6 +95,10 @@ export default function ProblemDetailsPage() {
     submitResulStatus,
     submitError,
   } = useSelector((state) => state.problem);
+  
+      const { isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
+
 
     const { comments, loading } = useSelector((state) => state.comments);
   const availableLangs = ["C++", "PYTHON"];
@@ -111,6 +116,8 @@ export default function ProblemDetailsPage() {
 // you can pass this as a prop too
 
   const [sourceCode, setSourceCode] = useState("");
+  const [hasRunProblem, setHasRunProblem] = useState(false);
+
 const [solutionLang, setSolutionLang] = useState(() => getDefaultLanguage(problem, availableLangs));
   useEffect(() => {
   if (id) {
@@ -158,6 +165,7 @@ useEffect(() => {
 useEffect(() => {
   if (runResult) {
     setRightTab("Results");
+    setHasRunProblem(true);
   }
 
   if (runError) {
@@ -217,6 +225,10 @@ useEffect(() => {
       toast("Please write code before running.");
       return;
     }
+     if (!authLoading && !isAuthenticated) {
+      toast("You must be logged in to Solve problems");
+      router.push("/login");
+    }
     dispatch(clearRunResult());
     dispatch(
       runCode({
@@ -232,6 +244,10 @@ useEffect(() => {
     if (!sourceCode.trim()) {
       toast("Please write code before submitting.");
       return;
+    }
+     if (!authLoading && !isAuthenticated) {
+      toast("You must be logged in to view problems");
+      router.push("/login");
     }
     dispatch(clearSubmitResult());
     dispatch(
@@ -347,50 +363,52 @@ useEffect(() => {
       </div>
             </TabsContent>
 
-            <TabsContent value="solutions" className="flex flex-col h-full overflow-auto ml-2 p-2">
-              <Section title="Reference Solutions">
-                <div className="flex gap-2 mb-4 flex-wrap">
-                  {availableLangs.map((l) => (
-  <Button
-    key={l}
-    size="sm"
-    variant={solutionLang === l ? "default" : "outline"}
-    className=" px-4"
-    onClick={() => setSolutionLang(l)}
-  >
-    {l}
-  </Button>
-))}
+           <TabsContent value="solutions" className="flex flex-col h-full overflow-auto ml-2 p-2">
+  {hasRunProblem && (
+    <Section title="Reference Solutions">
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {availableLangs.map((l) => (
+          <Button
+            key={l}
+            size="sm"
+            variant={solutionLang === l ? "default" : "outline"}
+            className="px-4"
+            onClick={() => setSolutionLang(l)}
+          >
+            {l}
+          </Button>
+        ))}
+      </div>
 
-                </div>
+      <Card className="flex-grow overflow-auto">
+        <CardContent className="p-4 relative">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-3 right-3 opacity-80 hover:opacity-100"
+            title="Copy Solution"
+            tabIndex={-1}
+            onClick={() =>
+              copyToClipboard(
+                problem?.referenceSolutions?.[solutionLang]
+                  ?.replace(/int\s+main\s*\([^)]*\)\s*\{[\s\S]*?\n\}/, "")
+                  ?.trim() || ""
+              )
+            }
+          >
+            <Copy className="w-4 h-4" />
+          </Button>
+          <pre className="text-sm leading-6 overflow-x-auto p-4 font-mono whitespace-pre-wrap">
+            {problem?.referenceSolutions?.[solutionLang]
+              ?.replace(/int\s+main\s*\([^)]*\)\s*\{[\s\S]*?\n\}/, "")
+              ?.trim()}
+          </pre>
+        </CardContent>
+      </Card>
+    </Section>
+  )}
+</TabsContent>
 
-                <Card className="  flex-grow overflow-auto">
-                  <CardContent className="p-4 relative">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="absolute top-3 right-3 opacity-80 hover:opacity-100"
-                      title="Copy Solution"
-                      tabIndex={-1}
-                      onClick={() =>
-                        copyToClipboard(  problem?.referenceSolutions?.[solutionLang]
-    ?.replace(/int\s+main\s*\([^)]*\)\s*\{[\s\S]*?\n\}/, '')
-    ?.trim() || "")
-                      }
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-               <pre className=" text-sm leading-6 overflow-x-auto p-4 font-mono whitespace-pre-wrap">
-  {problem?.referenceSolutions?.[solutionLang]
-    ?.replace(/int\s+main\s*\([^)]*\)\s*\{[\s\S]*?\n\}/, '')
-    ?.trim()}
-</pre>
-
-
-                  </CardContent>
-                </Card>
-              </Section>
-            </TabsContent>
            <TabsContent value="result" className="flex flex-col h-full overflow-auto ml-2 p-2">
   {/* --- Submission Result Section --- */}
   {submitResult ? (

@@ -28,6 +28,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogOverlay,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -43,12 +44,7 @@ export default function ProblemsList() {
   const dispatch = useDispatch();
     const { isAuthenticated, loading: authLoading } = useAuth();
 const router = useRouter();
-  useEffect(() => {
-  if (!authLoading && !isAuthenticated) {
-    toast("You must be logged in to view problems");
-    router.push("/login");
-  }
-}, [authLoading, isAuthenticated, router]);
+  
   const { items: problems, status, tags, error } = useSelector(
     (state) => state.problem
   );
@@ -90,6 +86,10 @@ const router = useRouter();
 
   const handleCreatePlaylist = async () => {
     if (!newPlaylist.title.trim() || !selectedProblem) return;
+    if (!authLoading && !isAuthenticated) {
+      toast("You must be logged in to view Create Playlist");
+      router.push("/login");
+    }
 
     const result = await dispatch(createPlaylist(newPlaylist));
     if (result.payload?._id) {
@@ -108,6 +108,10 @@ const router = useRouter();
 
   const handleAddToPlaylist = async () => {
     if (!selectedPlaylistId || !selectedProblem) return;
+     if (!authLoading && !isAuthenticated) {
+    toast("You must be logged in to view Create Playlist");
+    router.push("/login");
+  }
 
     await dispatch(addProblemToPlaylist({
       playlistId: selectedPlaylistId,
@@ -121,32 +125,7 @@ const router = useRouter();
     setSelectedPlaylistId("");
   };
 
-  const handleQuickAddToDPPlaylist = async (problem) => {
-    // Check if "Dynamic Programming" playlist exists
-    const dpPlaylist = playlists.find(p => p.title === "Dynamic Programming");
-
-    if (dpPlaylist) {
-      // If exists, add problem to it
-      await dispatch(addProblemToPlaylist({
-        playlistId: dpPlaylist._id,
-        problemId: problem._id
-      }));
-    } else {
-      // If doesn't exist, create it first
-      const result = await dispatch(createPlaylist({
-        title: "Dynamic Programming",
-        description: "All important DP problems"
-      }));
-
-      if (result.payload?._id) {
-        // Then add the problem to it
-        await dispatch(addProblemToPlaylist({
-          playlistId: result.payload._id,
-          problemId: problem._id
-        }));
-      }
-    }
-  };
+ 
 
   const getBadgeColor = (difficulty) => {
     switch (difficulty) {
@@ -179,68 +158,62 @@ const router = useRouter();
       return isDifficultyMatch && isStatusMatch;
     });
   }, [problems, difficultyFilter, statusFilter]);
+   const [isFixed, setIsFixed] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Adjust 200 to the scroll distance where you want it to become fixed
+      if (window.scrollY > 10) {
+        setIsFixed(true);
+      } else {
+        setIsFixed(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen max-w-7xl mx-auto">
       <div className="flex flex-1 flex-col md:flex-row overflow-hidden">
         {/* Sidebar */}
-        <aside className="w-full md:w-64 bg-gray-100 p-4 border-b md:border-b-0 md:border-r overflow-y-auto">
-          <h2 className="text-lg font-semibold mb-4">Filters</h2>
-          <div className="mb-6">
-            <p className="font-medium mb-2">Difficulty</p>
-            {["EASY", "MEDIUM", "HARD"].map((level) => (
-              <label
-                key={level}
-                className="flex items-center space-x-2 mb-1 cursor-pointer select-none"
-              >
-                <Checkbox
-                  checked={difficultyFilter[level]}
-                  onCheckedChange={() => {
-                    setDifficultyTouched(true);
-                    setDifficultyFilter((prev) => ({
-                      ...prev,
-                      [level]: !prev[level],
-                    }));
-                  }}
-                />
-                <span>{level}</span>
-              </label>
-            ))}
-          </div>
+        <aside
+          className={`${
+            isFixed
+              ? "fixed top-0 left-0 md:w-30 w-full h-full z-60 overflow-y-auto  p-4"
+              : "relative md:w-40 w-full p-4"
+          }`}
+    >
+  <h2 className="text-lg font-semibold mb-4">Filters</h2>
+  <div className="mb-6">
+    <p className="font-medium mb-2">Difficulty</p>
+    {["EASY", "MEDIUM", "HARD"].map((level) => (
+      <label
+        key={level}
+        className="flex items-center space-x-2 mb-1 cursor-pointer select-none"
+      >
+        <Checkbox
+          checked={difficultyFilter[level]}
+          onCheckedChange={() => {
+            setDifficultyTouched(true);
+            setDifficultyFilter((prev) => ({
+              ...prev,
+              [level]: !prev[level],
+            }));
+          }}
+        />
+        <span>{level}</span>
+      </label>
+    ))}
+  </div>
+</aside>
 
-          <div>
-            <p className="font-medium mb-2">Status</p>
-
-            <label className="flex items-center space-x-2 mb-1 cursor-pointer select-none">
-              <Checkbox
-                checked={statusFilter["Unsolved"]}
-                onCheckedChange={() => {
-                  setStatusFilter({
-                    Solved: false,
-                    Unsolved: !statusFilter["Unsolved"],
-                  });
-                }}
-              />
-              <span>Unsolved</span>
-            </label>
-
-            <label className="flex items-center space-x-2 mb-1 cursor-pointer select-none">
-              <Checkbox
-                checked={statusFilter["Solved"]}
-                onCheckedChange={() => {
-                  setStatusFilter({
-                    Solved: !statusFilter["Solved"],
-                    Unsolved: false,
-                  });
-                }}
-              />
-              <span>Solved</span>
-            </label>
-          </div>
-        </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className={`overflow-y-auto p-4 md:p-6 transition-all duration-300 ${
+    isFixed ? " ml-40  w-full" : "w-full md:w-[calc(100%-10rem)]"
+  }`}>
           {/* Loading Skeleton */}
           {status === "loading" && (
             <div className="space-y-4">
@@ -276,12 +249,12 @@ const router = useRouter();
                   {/* For larger screens, keep table */}
                   <div className="hidden md:block">
                     <Table className="mt-4">
-                      <TableCaption>List of coding problems</TableCaption>
+                     
                       <TableHeader>
                         <TableRow>
                           <TableHead>Problem</TableHead>
                           <TableHead>Difficulty</TableHead>
-                          <TableHead>Status</TableHead>
+                          
                           <TableHead>Add to Sheets</TableHead>
                           <TableHead>Solve</TableHead>
                         </TableRow>
@@ -301,13 +274,10 @@ const router = useRouter();
                                 {problem.difficulty}
                               </span>
                             </TableCell>
-                            <TableCell>
-                              {/* You can replace this Badge with dynamic status later */}
-                              <Badge variant="outline">Unsolved</Badge>
-                            </TableCell>
+                          
                             <TableCell>
                               <div className="flex gap-2">
-                                <Dialog open={open} onOpenChange={setOpen}>
+                                <Dialog open={open} onOpenChange={setOpen } className="w-full bg-white">
                                   <DialogTrigger asChild>
                                     <Button
                                       variant="secondary"
@@ -320,8 +290,8 @@ const router = useRouter();
                                       Add to Playlist
                                     </Button>
                                   </DialogTrigger>
-
-                                  <DialogContent >
+                                        <DialogOverlay className="fixed inset-0 bg-white/70 backdrop-blur-sm z-40" />
+                                  <DialogContent  className="bg-white [&>div[data-radix-dialog-overlay]]:bg-white/70 [&>div[data-radix-dialog-overlay]]:backdrop-blur-sm [&>div[data-radix-dialog-overlay]]:z-40" >
                                     <DialogHeader>
                                       <DialogTitle>Add to Playlist</DialogTitle>
                                       <DialogDescription>
